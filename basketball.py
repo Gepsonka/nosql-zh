@@ -13,7 +13,8 @@ class Basketball:
         
         self.r.sadd('players', 'player_' + player_id)
         
-    def get_player(self, )
+    def get_player(self, player_id):
+        return self.r.hgetall('player_id')
         
     def list_players_with_date_of_birth(self):
         for x in self.r.smembers('players'):
@@ -28,8 +29,9 @@ class Basketball:
         
         for x in self.r.smembers('teams'):
             if self.r.sismember(x, player_id):
-                print('player has already a contract with a different team')
+                print(player_id + ' has already have a contract with a different team')
                 return
+        
                 
         if not self.r.sismember('teams', team):
             self.r.sadd('teams', team)
@@ -37,9 +39,9 @@ class Basketball:
         self.r.sadd(team, player_id)
         
         
-    def break_contract(self, player_id, team):
+    def break_contract_or_delete_team(self, player_id, team):
         if not self.r.sismember('players', player_id):
-            print('player does not exists')
+            print(player_id + ' does not exists')
             return
         
         if not self.r.smismember('teams', team):
@@ -52,6 +54,50 @@ class Basketball:
             
         self.r.srem(team, player_id)
         
+    def get_players_of_team(self, team):
+        if not self.r.sismember('teams', team):
+            print('team does not exists')
+            return
+        
+        print(team + ':')
+        for x in self.r.smembers(team):
+            print(self.r.hgetall(x))
+            
+    def print_teams(self):
+        print('Teams: ')
+        print(self.r.smembers('teams'))
+        
+    def announce_match(self, date, place, team_1, team_2):
+        if team_1 == team_2:
+            print('The same team cannot play against itself')
+            return
+        
+        if not self.r.sismember('teams', team_1) or not self.r.sismember('teams', team_2):
+            print('Team/Teams does not exists')
+            return
+        
+        for x in self.r.smembers("matches"):
+            match=self.r.hgetall(x)
+            if match["date"] == date and match["place"]==place and match['team_1']==team_1 and match['team_2'] == team_2:
+                print("Match exists!")
+                return
+        
+        match_id = str(self.r.incr("match_id"))
+        self.r.hmset("match_" + match_id, {
+            "date": date,
+            "place": place,
+            "team_1": team_1,
+            "team_2": team_2
+        })
+        
+        self.r.sadd('matches', "match_" + match_id)
+        
+    def print_matches(self):
+        for x in self.r.smembers("matches"):
+            print(x + ':')
+            for y in self.r.hgetall(x).items():
+                print(y)
+                
         
                 
 
@@ -67,5 +113,25 @@ if __name__=="__main__":
     b.list_players_with_date_of_birth()
     
     
+    b.create_contract_with_team('player_14', 'Felcsut')
+    b.create_contract_with_team('player_14', 'Felcsut')
+    b.create_contract_with_team('player_13', 'Felcsut')
+    b.create_contract_with_team('player_15', 'Felcsut')
     
     
+    
+    b.create_contract_with_team('player_14', 'Fradi')
+    b.create_contract_with_team('player_11', 'Fradi')
+    b.create_contract_with_team('player_12', 'Fradi')
+    
+    b.get_players_of_team('Felcsut')
+    
+    b.print_teams()
+    
+    b.announce_match('202203122000', 'Fonix', 'Felcsut', "Fradi")
+    b.announce_match('202203202000', 'Fonix', 'Fradi', "Felcsut")
+    b.announce_match('202203122000', 'Fonix', 'Felcsasddaut', "Fradi")
+    b.announce_match('202203122000', 'Fonix', 'Felcsut', "Felcsut")
+    
+    
+    b.print_matches()
